@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Dice | RPG Roller Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.75);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.6);
+            --accent: #f43f5e;
+            --critical: #fbbf24;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.12);
+        }
+
+        .light-mode {
+            --bg-dark: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --primary: #4f46e5;
+            --text-main: #1e293b;
+            --text-dim: #64748b;
+            --glass-border: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.4s ease;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 95%;
+            max-width: 1280px;
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 24px;
+            padding: 24px;
+        }
+
+        @media (max-width: 1100px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar { order: 3; }
+            .main-display { order: 1; }
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+            height: fit-content;
+        }
+
+        /* ==================== CENTRO ==================== */
+        .main-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+        }
+
+        .dice-stage {
+            width: 100%;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1200px;
+            position: relative;
+        }
+
+        .result-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9.5rem;
+            font-weight: 800;
+            line-height: 1;
+            text-shadow: 0 0 40px var(--primary-glow);
+            transition: all 0.3s ease;
+        }
+
+        .critical-hit {
+            color: var(--critical) !important;
+            text-shadow: 0 0 60px var(--critical), 0 0 100px var(--critical) !important;
+            animation: criticalPop 0.6s ease;
+        }
+
+        /* Barra de Fórmula */
+        .formula-bar {
+            width: 100%;
+            display: flex;
+            gap: 12px;
+        }
+
+        #formula-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--glass-border);
+            padding: 16px 20px;
+            border-radius: 16px;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        #formula-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .roll-trigger {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 36px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .roll-trigger:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--primary-glow);
+        }
+
+        /* Grid de Dados */
+        .dice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+            gap: 12px;
+            width: 100%;
+        }
+
+        .dice-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 16px 8px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dice-btn:hover {
+            background: var(--primary);
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 10px 25px var(--primary-glow);
+        }
+
+        /* ==================== SIDEBARS ==================== */
+        .sidebar h2 {
+            font-size: 1.35rem;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-list {
+            max-height: 420px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-item {
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.2);
+            padding: 18px;
+            border-radius: 14px;
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+
+        /* Animações */
+        @keyframes criticalPop {
+            0% { transform: scale(0.6); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes rolling {
+            0% { transform: rotateX(0deg) rotateY(0deg); }
+            100% { transform: rotateX(800deg) rotateY(800deg); }
+        }
+
+        .is-rolling .result-number {
+            animation: rolling 650ms cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar { width: 7px; }
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Sidebar Esquerda -->
+    <aside class="sidebar glass-panel">
+        <h2>Estatísticas</h2>
+        <div class="stat-card">
+            <span class="text-dim">Média Total</span>
+            <span class="stat-value" id="stat-avg">0.0</span>
+        </div>
+        <div class="stat-card">
+            <span class="text-dim">Maior Rolagem</span>
+            <span class="stat-value" id="stat-max">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="text-dim">Total de Rolagens</span>
+            <span class="stat-value" id="stat-count">0</span>
+        </div>
+
+        <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="sound-toggle" checked>
+                <span>Efeitos Sonoros</span>
+            </label>
+            <button onclick="toggleTheme()" class="dice-btn">Alternar Tema (Claro/Escuro)</button>
+        </div>
+    </aside>
+
+    <!-- Área Principal -->
+    <main class="main-display">
+        <div class="dice-stage glass-panel" id="dice-stage">
+            <div class="result-number" id="result-display">?</div>
+        </div>
+
+        <div class="formula-bar">
+            <input type="text" id="formula-input" placeholder="Ex: 3d8 + 2d6 + 5 ou 4d6kh3" autocomplete="off">
+            <button class="roll-trigger" onclick="rollCurrentFormula()">ROLAR</button>
+        </div>
+
+        <div class="dice-grid">
+            <button class="dice-btn" onclick="quickRoll(4)">D4</button>
+            <button class="dice-btn" onclick="quickRoll(6)">D6</button>
+            <button class="dice-btn" onclick="quickRoll(8)">D8</button>
+            <button class="dice-btn" onclick="quickRoll(10)">D10</button>
+            <button class="dice-btn" onclick="quickRoll(12)">D12</button>
+            <button class="dice-btn" onclick="quickRoll(20)">D20</button>
+            <button class="dice-btn" onclick="quickRoll(100)">D100</button>
+            <button class="dice-btn" onclick="advantageRoll()">VANTAGEM</button>
+        </div>
+
+        <p class="text-dim" style="text-align:center; margin-top: 12px;">
+            Pressione <strong>Enter</strong> para rolar • Suporta fórmulas complexas
+        </p>
+    </main>
+
+    <!-- Sidebar Direita -->
+    <aside class="sidebar glass-panel">
+        <h2>Histórico 
+            <button onclick="clearHistory()" style="background:none;border:none;color:var(--accent);font-size:0.85rem;cursor:pointer;">Limpar</button>
+        </h2>
+        <div class="history-list" id="history-list"></div>
+    </aside>
+</div>
+
+<script>
+// ==================== CONFIGURAÇÕES ====================
+let history = [];
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const elements = {
+    resultDisplay: document.getElementById('result-display'),
+    diceStage: document.getElementById('dice-stage'),
+    formulaInput: document.getElementById('formula-input'),
+    historyList: document.getElementById('history-list'),
+    statAvg: document.getElementById('stat-avg'),
+    statMax: document.getElementById('stat-max'),
+    statCount: document.getElementById('stat-count')
+};
+
+// ==================== ÁUDIO ====================
+function playRollSound() {
+    if (!document.getElementById('sound-toggle').checked) return;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.18);
+    
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.25);
+}
+
+// ==================== ROLAGEM ====================
+function rollDice(sides, count = 1) {
+    return Array.from({length: count}, () => Math.floor(Math.random() * sides) + 1);
+}
+
+function quickRoll(sides) {
+    const rolls = rollDice(sides);
+    const total = rolls.reduce((a, b) => a + b, 0);
+    
+    showRollingAnimation();
+    setTimeout(() => {
+        updateDisplay(total, rolls, sides);
+        saveToHistory(total, `${rolls.length}d${sides}`, rolls);
+    }, 520);
+}
+
+function advantageRoll() {
+    const r1 = Math.floor(Math.random() * 20) + 1;
+    const r2 = Math.floor(Math.random() * 20) + 1;
+    const total = Math.max(r1, r2);
+    
+    showRollingAnimation();
+    setTimeout(() => {
+        updateDisplay(total, [r1, r2], 20, "Vantagem");
+        saveToHistory(total, "Vantagem (2d20)", [r1, r2]);
+    }, 520);
+}
+
+// Suporte básico a fórmulas (pode ser expandido com parser mais poderoso)
+function rollCurrentFormula() {
+    const input = elements.formulaInput.value.trim().toLowerCase();
+    if (!input) return;
+
+    // Exemplo simples: 3d8+2d6+5
+    const totalRegex = /(\d+)d(\d+)([+\-]?\d+)?/gi;
+    let total = 0;
+    let allRolls = [];
+    let formulaParts = [];
+
+    let match;
+    while ((match = totalRegex.exec(input)) !== null) {
+        const count = parseInt(match[1]);
+        const sides = parseInt(match[2]);
+        const mod = match[3] ? parseInt(match[3]) : 0;
+
+        const rolls = rollDice(sides, count);
+        const sum = rolls.reduce((a,b)=>a+b, 0);
+        
+        total += sum + mod;
+        allRolls.push(...rolls);
+        formulaParts.push(`${count}d${sides}${mod ? (mod>0?'+'+mod:mod) : ''}`);
+    }
+
+    if (formulaParts.length === 0) {
+        alert("Formato não reconhecido.\nExemplos:\n• 2d20+5\n• 4d6+3\n• 3d8+2d6");
+        return;
+    }
+
+    showRollingAnimation();
+    setTimeout(() => {
+        updateDisplay(total, allRolls);
+        saveToHistory(total, formulaParts.join(" + "), allRolls);
+    }, 520);
+}
+
+// ==================== ANIMAÇÃO E DISPLAY ====================
+function showRollingAnimation() {
+    playRollSound();
+    elements.diceStage.classList.add('is-rolling');
+    
+    setTimeout(() => {
+        elements.diceStage.classList.remove('is-rolling');
+    }, 700);
+}
+
+function updateDisplay(total, rolls, sides = null, label = "") {
+    elements.resultDisplay.textContent = total;
+    elements.resultDisplay.classList.remove('critical-hit');
+
+    // Crítico no D20
+    if (sides === 20 && (rolls.some(r => r === 20) || total === 20)) {
+        elements.resultDisplay.classList.add('critical-hit');
+    }
+}
+
+// ==================== HISTÓRICO E ESTATÍSTICAS ====================
+function saveToHistory(total, formula, rolls) {
+    const entry = {
+        id: Date.now(),
+        total: total,
+        formula: formula,
+        rolls: rolls,
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    history.unshift(entry);
+    if (history.length > 50) history.pop(); // limite de histórico
+
+    updateHistoryUI();
+    updateStats();
+}
+
+function updateHistoryUI() {
+    elements.historyList.innerHTML = history.map(item => `
+        <div class="history-item">
+            <div>
+                <strong style="font-size:1.3rem">${item.total}</strong>
+                <span class="text-dim" style="margin-left:12px">${item.formula}</span>
+            </div>
+            <span class="text-dim">${item.time}</span>
+        </div>
+    `).join('');
+}
+
+function updateStats() {
+    if (!history.length) return;
+
+    const totals = history.map(h => h.total);
+    const sum = totals.reduce((a, b) => a + b, 0);
+
+    elements.statAvg.textContent = (sum / history.length).toFixed(1);
+    elements.statMax.textContent = Math.max(...totals);
+    elements.statCount.textContent = history.length;
+}
+
+function clearHistory() {
+    if (confirm("Limpar todo o histórico?")) {
+        history = [];
+        updateHistoryUI();
+        updateStats();
+    }
+}
+
+function toggleTheme() {
+    document.body.classList.toggle('light-mode');
+}
+
+// ==================== EVENTOS ====================
+elements.formulaInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        rollCurrentFormula();
+    }
+});
+
+// Foco inicial
+window.addEventListener('load', () => {
+    elements.formulaInput.focus();
+});
+</script>
+</body>
+</html>
